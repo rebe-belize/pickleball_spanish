@@ -1,0 +1,422 @@
+/* ==========================================================================
+   1. VARIABLES & BASE SETUP
+   ========================================================================== */
+:root {
+  --bg-color: #f4f6f8;
+  --card-bg: #ffffff;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+  
+  --success: #16a34a;
+  --success-bg: #dcfce7;
+  --warning: #ea580c;
+  --warning-bg: #ffedd5;
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  
+  --border-color: #e2e8f0;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==========================================================================
+   2. LAYOUT & CONTAINERS
+   ========================================================================== */
+.page {
+  min-height: 100vh;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page {
+    padding: 2rem 1rem;
+  }
+}
+
+.container {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brand p {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.admin-link {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: rgba(37, 99, 235, 0.08);
+  transition: background 0.2s;
+}
+
+.admin-link:hover {
+  background: rgba(37, 99, 235, 0.15);
+}
+
+/* ==========================================================================
+   3. CARDS & SECTIONS
+   ========================================================================== */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 1.5rem;
+  }
+}
+
+.card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-main);
+}
+
+.event-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.event-date {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.event-time, .location {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+/* Status Badges */
+.status {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.status.green {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.status.orange {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+.status.gray {
+  background-color: #f1f5f9;
+  color: var(--secondary);
+}
+
+/* ==========================================================================
+   4. PLAYERS & CHIPS
+   ========================================================================== */
+.players {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.player-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+}
+
+/* ==========================================================================
+   5. FORM & INPUTS (Responsive Grid)
+   ========================================================================== */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 580px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid #cbd5e1;
+  background-color: #fff;
+  color: var(--text-main);
+  font-size: 1rem; /* 1rem verhindert automatisches iOS-Safari-Zooming */
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* ==========================================================================
+   6. BUTTONS & ACTIONS
+   ========================================================================== */
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  text-decoration: none;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: #ffffff;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--secondary-hover);
+}
+
+.btn-danger {
+  background-color: var(--danger);
+  color: #ffffff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+/* ==========================================================================
+   7. COMMENTS & LISTS
+   ========================================================================== */
+.comment-list {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.comment {
+  background: #f8fafc;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  border-left: 3px solid var(--primary);
+}
+
+.comment-name {
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.comment-text {
+  color: var(--text-muted);
+}
+
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+  gap: 1rem;
+}
+
+.list-item:last-child {
+  border-bottom: none;
+}
+
+/* ==========================================================================
+   8. NOTICES & ERRORS
+   ========================================================================== */
+.notice {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.error {
+  background-color: var(--danger-bg);
+  border: 1px solid #fca5a5;
+  color: var(--danger);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+/* ==========================================================================
+   9. MANUAL DARK MODE (Greift sowohl auf html.dark als auch body.dark)
+   ========================================================================== */
+html.dark, 
+body.dark,
+.dark {
+  --bg-color: #0f172a !important;
+  --card-bg: #1e293b !important;
+  --text-main: #f8fafc !important;
+  --text-muted: #94a3b8 !important;
+  --border-color: #334155 !important;
+  
+  --success-bg: #064e3b !important;
+  --success: #34d399 !important;
+  --warning-bg: #451a03 !important;
+  --warning: #fb923c !important;
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+/* Spezifische Element-Anpassungen im Dark Mode */
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+.dark .card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark .player-chip, 
+.dark .comment {
+  background-color: #334155 !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+.dark .comment-name {
+  color: #f8fafc !important;
+}
+
+.dark .admin-link {
+  background: rgba(37, 99, 235, 0.25) !important;
+  color: #60a5fa !important;
+}
+
+.dark .notice {
+  background-color: #1e3a8a !important;
+  border-color: #1d4ed8 !important;
+  color: #93c5fd !important;
+}
