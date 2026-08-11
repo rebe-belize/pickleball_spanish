@@ -49,6 +49,7 @@ export default function PlayerApp({
   const [players, setPlayers] = useState(initialPlayers);
   const [responses, setResponses] = useState(initialResponses);
   const [selected, setSelected] = useState<Record<string, string>>({});
+  const [arrivalTimes, setArrivalTimes] = useState<Record<string, string>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [guests, setGuests] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -93,6 +94,27 @@ export default function PlayerApp({
     }
   };
 
+  // Hilfsfunktion zum Generieren des kombinierten Kommentar-Strings
+  function buildCommentText(eventId: string): string {
+    const guestCount = guests[eventId] || 0;
+    const arrival = arrivalTimes[eventId]?.trim();
+    const freeText = comments[eventId]?.trim();
+
+    const parts: string[] = [];
+
+    if (guestCount > 0) {
+      parts.push(`+${guestCount} Guest(s)`);
+    }
+    if (arrival) {
+      parts.push(`⏰ Arrival: ${arrival}`);
+    }
+    if (freeText) {
+      parts.push(freeText);
+    }
+
+    return parts.join(" | ");
+  }
+
   // Anmelden / Abmelden / Löschen über das X
   async function handleResponse(eventId: string, playerId: string, forceRemove = false, responseIdTarget?: string) {
     if (!playerId && !responseIdTarget) {
@@ -108,13 +130,7 @@ export default function PlayerApp({
     setBusy(eventId);
     setMessage("");
 
-    const guestCount = guests[eventId] || 0;
-    let commentText = comments[eventId] || "";
-
-    if (guestCount > 0 && !commentText.includes(`+${guestCount}`)) {
-      commentText = commentText ? `+${guestCount} Guest(s) | ${commentText}` : `+${guestCount} Guest(s)`;
-    }
-
+    const commentText = buildCommentText(eventId);
     const targetPlayerId = playerId || existing?.player_id;
 
     const res = await fetch("/api/responses", {
@@ -170,16 +186,12 @@ export default function PlayerApp({
     }
     const existing = responses.find(r => r.event_id === eventId && r.player_id === playerId);
     if (!existing) {
-      setMessage("Please sign up first before updating your comment.");
+      setMessage("Please sign up first before updating your details.");
       return;
     }
 
     setBusy(eventId);
-    const guestCount = guests[eventId] || 0;
-    let commentText = comments[eventId] || "";
-    if (guestCount > 0 && !commentText.includes(`+${guestCount}`)) {
-      commentText = commentText ? `+${guestCount} Guest(s) | ${commentText}` : `+${guestCount} Guest(s)`;
-    }
+    const commentText = buildCommentText(eventId);
 
     const res = await fetch("/api/responses", {
       method: "PATCH",
@@ -190,7 +202,7 @@ export default function PlayerApp({
     setBusy(null);
 
     if (!res.ok) {
-      setMessage(data.error || "Comment could not be saved.");
+      setMessage(data.error || "Details could not be saved.");
       return;
     }
     setResponses(prev => prev.map(r => r.id === existing.id ? data.response : r));
@@ -282,6 +294,7 @@ export default function PlayerApp({
 
               {/* Formular-Zeile */}
               <div className="form-row">
+                {/* Wer bist du */}
                 <div className="form-group">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <label>Who are you?</label>
@@ -316,6 +329,7 @@ export default function PlayerApp({
                   )}
                 </div>
 
+                {/* Gäste */}
                 <div className="form-group">
                   <label>Bringing Guests?</label>
                   <select
@@ -329,13 +343,23 @@ export default function PlayerApp({
                   </select>
                 </div>
 
-                {/* Kommentar in eigener Zeile darunter */}
+                {/* Optionale Ankunftszeit */}
+                <div className="form-group">
+                  <label>Arrival Time (optional)</label>
+                  <input
+                    type="time"
+                    value={arrivalTimes[event.id] || ""}
+                    onChange={e => setArrivalTimes(prev => ({ ...prev, [event.id]: e.target.value }))}
+                  />
+                </div>
+
+                {/* Kommentar */}
                 <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                   <label>Comment (optional)</label>
                   <input
                     value={comments[event.id] || ""}
                     onChange={e => setComments(prev => ({ ...prev, [event.id]: e.target.value }))}
-                    placeholder="e.g. late by 15 mins"
+                    placeholder="e.g. need to leave early"
                   />
                 </div>
               </div>
@@ -370,10 +394,10 @@ export default function PlayerApp({
                 )}
               </div>
 
-              {/* Kommentare */}
+              {/* Kommentare & Ankunftszeiten anzeigen */}
               {eventResponses.some(r => r.comment) && (
                 <div className="comment-list">
-                  <strong style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>PLAYER NOTES</strong>
+                  <strong style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>PLAYER NOTES & ARRIVAL TIMES</strong>
                   {eventResponses.filter(r => r.comment).map(r => (
                     <div className="comment" key={r.id}>
                       <div className="comment-name">{responsePlayer(r)?.name}</div>

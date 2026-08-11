@@ -5,6 +5,19 @@ import { useState, useEffect } from "react";
 interface Player { id: string; name: string; active: boolean; }
 interface EventItem { id: string; starts_at: string; ends_at: string | null; location: string; notes: string; active: boolean; }
 
+// Hilfsfunktion zur Formatierung von Date-Strings für datetime-local Inputs (YYYY-MM-THH:mm)
+function formatToDatetimeLocal(isoString: string): string {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
 export default function AdminApp() {
   const [password, setPassword] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -15,10 +28,23 @@ export default function AdminApp() {
   const [events, setEvents] = useState<EventItem[]>([]);
 
   const [playerName, setPlayerName] = useState("");
+
+  // Event Form State
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [eventStartsAt, setEventStartsAt] = useState("");
   const [eventEndsAt, setEventEndsAt] = useState("");
   const [eventLocation, setEventLocation] = useState("");
   const [eventNotes, setEventNotes] = useState("");
+  const [eventActive, setEventActive] = useState(true);
+
+  const resetEventForm = () => {
+    setEditingEventId(null);
+    setEventStartsAt("");
+    setEventEndsAt("");
+    setEventLocation("");
+    setEventNotes("");
+    setEventActive(true);
+  };
 
   const fetchData = async () => {
     try {
@@ -105,30 +131,47 @@ export default function AdminApp() {
     }
   };
 
-  const handleAddEvent = async (e: React.FormEvent) => {
+  // Event Erstellen oder Aktualisieren
+  const handleSaveEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!eventStartsAt) return;
+
+    const startsAtIso = new Date(eventStartsAt).toISOString();
+    const endsAtIso = eventEndsAt ? new Date(eventEndsAt).toISOString() : null;
+
+    const action = editingEventId ? "update_event" : "add_event";
+    const payload = {
+      action,
+      ...(editingEventId ? { id: editingEventId } : {}),
+      starts_at: startsAtIso,
+      ends_at: endsAtIso,
+      location: eventLocation,
+      notes: eventNotes,
+      active: eventActive,
+    };
+
     const res = await fetch("/api/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "add_event",
-        starts_at: eventStartsAt,
-        ends_at: eventEndsAt || null,
-        location: eventLocation,
-        notes: eventNotes,
-      }),
+      body: JSON.stringify(payload),
     });
+
     if (res.ok) {
-      setEventStartsAt("");
-      setEventEndsAt("");
-      setEventLocation("");
-      setEventNotes("");
+      resetEventForm();
       fetchData();
     } else {
       const data = await res.json();
-      alert(data.error || "Error adding event.");
+      alert(data.error || `Error ${editingEventId ? "updating" : "adding"} event.`);
     }
+  };
+
+  const handleEditClick = (ev: EventItem) => {
+    setEditingEventId(ev.id);
+    setEventStartsAt(formatToDatetimeLocal(ev.starts_at));
+    setEventEndsAt(ev.ends_at ? formatToDatetimeLocal(ev.ends_at) : "");
+    setEventLocation(ev.location || "");
+    setEventNotes(ev.notes || "");
+    setEventActive(ev.active ?? true);
   };
 
   const handleDeleteEvent = async (id: string) => {
@@ -138,8 +181,12 @@ export default function AdminApp() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "delete_event", id }),
     });
-    if (res.ok) fetchData();
-    else alert("Error deleting event.");
+    if (res.ok) {
+      if (editingEventId === id) resetEventForm();
+      fetchData();
+    } else {
+      alert("Error deleting event.");
+    }
   };
 
   if (loading) return <main className="page"><div className="container">Loading...</div></main>;
@@ -223,10 +270,12 @@ export default function AdminApp() {
           </div>
         </section>
 
-        {/* Create Event Section */}
+        {/* Create / Edit Event Section */}
         <section className="card">
-          <h2 className="card-title">Create New Event</h2>
-          <form onSubmit={handleAddEvent} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <h2 className="card-title">
+            {editingEventId ? "Edit Event" : "Create New Event"}
+          </h2>
+          <form onSubmit={handleSaveEvent} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div className="form-row">
               <div className="form-group">
                 <label>Start Time</label>
@@ -266,9 +315,28 @@ export default function AdminApp() {
               />
             </div>
 
-            <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
-              Save Event
-            </button>
+            {editingEventId && (
+              <div className="form-group" style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <input
+                  type="checkbox"
+                  id="eventActive"
+                  checked={eventActive}
+                  onChange={(e) => setEventActive(e.target.checked)}
+                />
+                <label htmlFor="eventActive" style={{ margin: 0 }}>Active Event</label>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button type="submit" className="btn btn-primary">
+                {editingEventId ? "Update Event" : "Save Event"}
+              </button>
+              {editingEventId && (
+                <button type="button" onClick={resetEventForm} className="btn btn-secondary">
+                  Cancel
+                </button>
+              )}
+            </div>
           </form>
         </section>
 
@@ -280,18 +348,24 @@ export default function AdminApp() {
           ) : (
             <div>
               {events.map((ev) => (
-                <div key={ev.id} className="list-item">
+                <div key={ev.id} className="list-item" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 0", borderBottom: "1px solid var(--border)" }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>
                       {new Date(ev.starts_at).toLocaleString()}
                       {ev.ends_at && ` - ${new Date(ev.ends_at).toLocaleTimeString()}`}
+                      {!ev.active && <span style={{ marginLeft: "0.5rem", color: "var(--danger)", fontSize: "0.8rem" }}>(Inactive)</span>}
                     </div>
                     {ev.location && <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>📍 {ev.location}</div>}
                     {ev.notes && <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>📝 {ev.notes}</div>}
                   </div>
-                  <button onClick={() => handleDeleteEvent(ev.id)} className="btn btn-danger">
-                    Delete
-                  </button>
+                  <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <button onClick={() => handleEditClick(ev)} className="btn btn-secondary">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDeleteEvent(ev.id)} className="btn btn-danger">
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

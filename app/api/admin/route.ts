@@ -83,12 +83,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  // Event hinzufügen oder aktualisieren
+  // Event hinzufügen oder aktualisieren (mit ISO UTC Datums-Konvertierung)
   if (body.action === "add_event" || body.action === "update_event") {
     if (!body.starts_at) {
       return NextResponse.json({ error: "Start date/time is required." }, { status: 400 });
     }
 
+    if (body.action === "update_event" && !body.id) {
+      return NextResponse.json({ error: "Event ID required for update." }, { status: 400 });
+    }
+
+    // Speichert den exakten UTC-Zeitstempel
     const startsAtIso = new Date(body.starts_at).toISOString();
     const endsAtIso = body.ends_at ? new Date(body.ends_at).toISOString() : null;
 
@@ -97,7 +102,7 @@ export async function POST(req: Request) {
       ends_at: endsAtIso,
       location: String(body.location || "").slice(0, 150),
       notes: String(body.notes || "").slice(0, 300),
-      active: true
+      active: body.active !== undefined ? Boolean(body.active) : true
     };
 
     const query = body.action === "add_event"
@@ -111,7 +116,35 @@ export async function POST(req: Request) {
 
   // Event löschen
   if (body.action === "delete_event") {
+    if (!body.id) return NextResponse.json({ error: "Event ID required." }, { status: 400 });
     const { error } = await supabase.from("events").delete().eq("id", body.id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
+  // Admin-Aktion: Optionales Ankunftszeit/Kommentar-Feld für Spieler-Antworten (Responses) bearbeiten
+  if (body.action === "upsert_response") {
+    const { event_id, player_id, arrival_time, comment } = body;
+    if (!event_id || !player_id) {
+      return NextResponse.json({ error: "event_id and player_id are required." }, { status: 400 });
+    }
+
+    // Kombiniert z. B. Ankunftszeit ("18:30 Uhr") und/oder Anmerkungen in der Spalte comment
+    const responseComment = arrival_time 
+      ? `Kommt um ${arrival_time}${comment ? ` - ${comment}` : ""}`
+      : String(comment || "");
+
+    const { error } = await supabase
+      .from("responses")
+      .upsert(
+        { 
+          event_id, 
+          player_id, 
+          comment: responseComment 
+        }, 
+        { onConflict: "event_id,player_id" }
+      );
+
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });
   }
