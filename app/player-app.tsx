@@ -25,6 +25,34 @@ function getGuestsFromResponse(r: Response): number {
   return match ? parseInt(match[1] || match[2], 10) : 0;
 }
 
+function parseCommentData(commentStr: string | null) {
+  if (!commentStr) return { guests: 0, arrival: "", freeText: "" };
+
+  const parts = commentStr.split(" | ").map(p => p.trim());
+  let guests = 0;
+  let arrival = "";
+  const freeParts: string[] = [];
+
+  parts.forEach(part => {
+    const guestMatch = part.match(/\+(\d+)\s*Guest/i);
+    const arrivalMatch = part.match(/⏰ Arrival:\s*(\d{2}:\d{2})/i);
+
+    if (guestMatch) {
+      guests = parseInt(guestMatch[1], 10);
+    } else if (arrivalMatch) {
+      arrival = arrivalMatch[1];
+    } else {
+      freeParts.push(part);
+    }
+  });
+
+  return {
+    guests,
+    arrival,
+    freeText: freeParts.join(" | ")
+  };
+}
+
 function status(count: number) {
   if (count >= 4) return { cls: "green", text: `${count} Players – Game on!` };
   if (count >= 2) return { cls: "orange", text: `${count} Players – Almost enough` };
@@ -78,7 +106,6 @@ export default function PlayerApp({
     }
   }, []);
 
-  // Umschalt-Funktion
   const toggleDarkMode = () => {
     const nextState = !darkMode;
     setDarkMode(nextState);
@@ -92,6 +119,17 @@ export default function PlayerApp({
       document.body.classList.remove("dark");
       localStorage.setItem("theme", "light");
     }
+  };
+
+  // Klick auf den Player-Chip lädt alle Informationen in die Eingabefelder
+  const handleSelectPlayerFromChip = (eventId: string, response: Response) => {
+    const playerId = response.player_id;
+    const parsed = parseCommentData(response.comment);
+
+    setSelected(prev => ({ ...prev, [eventId]: playerId }));
+    setGuests(prev => ({ ...prev, [eventId]: parsed.guests }));
+    setArrivalTimes(prev => ({ ...prev, [eventId]: parsed.arrival }));
+    setComments(prev => ({ ...prev, [eventId]: parsed.freeText }));
   };
 
   // Hilfsfunktion zum Generieren des kombinierten Kommentar-Strings
@@ -127,6 +165,12 @@ export default function PlayerApp({
     );
     const shouldRemove = forceRemove || !!existing;
 
+    // Sicherheitsabfrage vor dem Löschen/Austragen
+    if (shouldRemove) {
+      const confirmed = window.confirm("Are you sure you want to cancel your attendance for this game?");
+      if (!confirmed) return;
+    }
+
     setBusy(eventId);
     setMessage("");
 
@@ -150,8 +194,12 @@ export default function PlayerApp({
     }
 
     if (shouldRemove) {
-      // Entfernt den Eintrag lokal aus dem State, sobald die API das Löschen bestätigt hat
       setResponses(prev => prev.filter(r => r.id !== (existing?.id || data.id)));
+      // Reset Eingabefelder für dieses Event
+      setSelected(prev => ({ ...prev, [eventId]: "" }));
+      setGuests(prev => ({ ...prev, [eventId]: 0 }));
+      setArrivalTimes(prev => ({ ...prev, [eventId]: "" }));
+      setComments(prev => ({ ...prev, [eventId]: "" }));
     } else {
       setResponses(prev => [...prev.filter(r => !(r.event_id === eventId && r.player_id === targetPlayerId)), data.response]);
     }
@@ -267,11 +315,25 @@ export default function PlayerApp({
                   const p = responsePlayer(r);
                   const guestCount = getGuestsFromResponse(r);
                   return (
-                    <div className="player-chip" key={r.id} style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                    <div 
+                      className="player-chip" 
+                      key={r.id} 
+                      onClick={() => handleSelectPlayerFromChip(event.id, r)}
+                      style={{ 
+                        display: "inline-flex", 
+                        alignItems: "center", 
+                        gap: "0.4rem", 
+                        cursor: "pointer" 
+                      }}
+                      title="Click to edit details for this player"
+                    >
                       <span>✓ {p?.name} {guestCount > 0 ? `(+${guestCount} Guest${guestCount > 1 ? 's' : ''})` : ''}</span>
                       <button
                         type="button"
-                        onClick={() => handleResponse(event.id, r.player_id, true, r.id)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Verhindert das Auslösen des Chip-Klicks beim Löschen
+                          handleResponse(event.id, r.player_id, true, r.id);
+                        }}
                         style={{
                           background: "none",
                           border: "none",
@@ -310,7 +372,21 @@ export default function PlayerApp({
                   {!showAddPlayer ? (
                     <select
                       value={selectedPlayer || ""}
-                      onChange={e => setSelected(prev => ({ ...prev, [event.id]: e.target.value }))}
+                      onChange={e => {
+                        const pid = e.target.value;
+                        setSelected(prev => ({ ...prev, [event.id]: pid }));
+                        
+                        // Falls der ausgewählte Spieler schon registriert ist, Daten direkt laden
+                        const existingResponse = eventResponses.find(r => r.player_id === pid);
+                        if (existingResponse) {
+                          handleSelectPlayerFromChip(event.id, existingResponse);
+                        } else {
+                          // Wenn es ein nicht-registrierter Spieler ist, Felder zurücksetzen
+                          setGuests(prev => ({ ...prev, [event.id]: 0 }));
+                          setArrivalTimes(prev => ({ ...prev, [event.id]: "" }));
+                          setComments(prev => ({ ...prev, [event.id]: "" }));
+                        }
+                      }}
                     >
                       <option value="">Select your name…</option>
                       {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
