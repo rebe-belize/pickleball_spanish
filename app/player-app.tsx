@@ -57,7 +57,7 @@ export default function PlayerApp({
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState("");
 
-// Dark Mode State (Standard auf null, um SSR-Probleme zu vermeiden)
+  // Dark Mode State
   const [darkMode, setDarkMode] = useState<boolean | null>(null);
 
   // Initialisierung beim Laden
@@ -93,13 +93,16 @@ export default function PlayerApp({
     }
   };
 
-  async function handleResponse(eventId: string, playerId: string, forceRemove = false) {
-    if (!playerId) {
+  // Anmelden / Abmelden / Löschen über das X
+  async function handleResponse(eventId: string, playerId: string, forceRemove = false, responseIdTarget?: string) {
+    if (!playerId && !responseIdTarget) {
       setMessage("Please select your name first.");
       return;
     }
 
-    const existing = responses.find(r => r.event_id === eventId && r.player_id === playerId);
+    const existing = responses.find(r => 
+      responseIdTarget ? r.id === responseIdTarget : (r.event_id === eventId && r.player_id === playerId)
+    );
     const shouldRemove = forceRemove || !!existing;
 
     setBusy(eventId);
@@ -112,12 +115,14 @@ export default function PlayerApp({
       commentText = commentText ? `+${guestCount} Guest(s) | ${commentText}` : `+${guestCount} Guest(s)`;
     }
 
+    const targetPlayerId = playerId || existing?.player_id;
+
     const res = await fetch("/api/responses", {
       method: shouldRemove ? "DELETE" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(shouldRemove
-        ? { event_id: eventId, player_id: playerId }
-        : { event_id: eventId, player_id: playerId, comment: commentText })
+        ? { event_id: eventId, player_id: targetPlayerId, id: existing?.id }
+        : { event_id: eventId, player_id: targetPlayerId, comment: commentText })
     });
 
     const data = await res.json();
@@ -129,9 +134,10 @@ export default function PlayerApp({
     }
 
     if (shouldRemove) {
-      setResponses(prev => prev.filter(r => !(r.event_id === eventId && r.player_id === playerId)));
+      // Entfernt den Eintrag lokal aus dem State, sobald die API das Löschen bestätigt hat
+      setResponses(prev => prev.filter(r => r.id !== (existing?.id || data.id)));
     } else {
-      setResponses(prev => [...prev.filter(r => !(r.event_id === eventId && r.player_id === playerId)), data.response]);
+      setResponses(prev => [...prev.filter(r => !(r.event_id === eventId && r.player_id === targetPlayerId)), data.response]);
     }
   }
 
@@ -253,7 +259,7 @@ export default function PlayerApp({
                       <span>✓ {p?.name} {guestCount > 0 ? `(+${guestCount} Guest${guestCount > 1 ? 's' : ''})` : ''}</span>
                       <button
                         type="button"
-                        onClick={() => handleResponse(event.id, r.player_id, true)}
+                        onClick={() => handleResponse(event.id, r.player_id, true, r.id)}
                         style={{
                           background: "none",
                           border: "none",
