@@ -83,7 +83,8 @@ export default function PlayerApp({
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  // Steuerung für Inline-Spieler-Erstellung pro Event (speichert die eventId)
+  const [showAddPlayerForEvent, setShowAddPlayerForEvent] = useState<string | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
 
   // Dark Mode State
@@ -205,7 +206,8 @@ export default function PlayerApp({
     }
   }
 
-  async function handleCreatePlayer(e: React.FormEvent) {
+  // Neuer Spieler wird erstellt und beim aktuellen Event direkt ausgewählt
+  async function handleCreatePlayer(e: React.FormEvent, eventId: string) {
     e.preventDefault();
     if (!newPlayerName.trim()) return;
 
@@ -217,10 +219,17 @@ export default function PlayerApp({
 
     const data = await res.json();
     if (res.ok) {
-      setPlayers(prev => [...prev, { id: data.id || Date.now().toString(), name: newPlayerName.trim() }].sort((a,b) => a.name.localeCompare(b.name)));
+      const createdId = data.id || Date.now().toString();
+      const newPlayerObj = { id: createdId, name: newPlayerName.trim() };
+
+      setPlayers(prev => [...prev, newPlayerObj].sort((a,b) => a.name.localeCompare(b.name)));
+      
+      // Den neu erstellten Spieler direkt im "Who are you?" Dropdown dieses Events selektieren
+      setSelected(prev => ({ ...prev, [eventId]: createdId }));
+
       setNewPlayerName("");
-      setShowAddPlayer(false);
-      setMessage("Name added! You can now select yourself from the list.");
+      setShowAddPlayerForEvent(null);
+      setMessage("Name added! It has been selected for you.");
     } else {
       setMessage(data.error || "Could not add name.");
     }
@@ -293,6 +302,7 @@ export default function PlayerApp({
           const s = status(totalCount);
           const selectedPlayer = selected[event.id];
           const alreadyIn = eventResponses.some(r => r.player_id === selectedPlayer);
+          const isAddingPlayer = showAddPlayerForEvent === event.id;
 
           return (
             <section className="card" key={event.id}>
@@ -331,7 +341,7 @@ export default function PlayerApp({
                       <button
                         type="button"
                         onClick={(e) => {
-                          e.stopPropagation(); // Verhindert das Auslösen des Chip-Klicks beim Löschen
+                          e.stopPropagation();
                           handleResponse(event.id, r.player_id, true, r.id);
                         }}
                         style={{
@@ -362,26 +372,31 @@ export default function PlayerApp({
                     <label>Who are you?</label>
                     <button
                       type="button"
-                      onClick={() => setShowAddPlayer(!showAddPlayer)}
+                      onClick={() => {
+                        if (isAddingPlayer) {
+                          setShowAddPlayerForEvent(null);
+                        } else {
+                          setShowAddPlayerForEvent(event.id);
+                          setNewPlayerName("");
+                        }
+                      }}
                       style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontSize: "0.8rem", fontWeight: 600 }}
                     >
-                      {showAddPlayer ? "Cancel" : "+ Not in list?"}
+                      {isAddingPlayer ? "Cancel" : "+ Not in list?"}
                     </button>
                   </div>
 
-                  {!showAddPlayer ? (
+                  {!isAddingPlayer ? (
                     <select
                       value={selectedPlayer || ""}
                       onChange={e => {
                         const pid = e.target.value;
                         setSelected(prev => ({ ...prev, [event.id]: pid }));
                         
-                        // Falls der ausgewählte Spieler schon registriert ist, Daten direkt laden
                         const existingResponse = eventResponses.find(r => r.player_id === pid);
                         if (existingResponse) {
                           handleSelectPlayerFromChip(event.id, existingResponse);
                         } else {
-                          // Wenn es ein nicht-registrierter Spieler ist, Felder zurücksetzen
                           setGuests(prev => ({ ...prev, [event.id]: 0 }));
                           setArrivalTimes(prev => ({ ...prev, [event.id]: "" }));
                           setComments(prev => ({ ...prev, [event.id]: "" }));
@@ -392,7 +407,7 @@ export default function PlayerApp({
                       {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   ) : (
-                    <form onSubmit={handleCreatePlayer} style={{ display: "flex", gap: "0.5rem" }}>
+                    <form onSubmit={(e) => handleCreatePlayer(e, event.id)} style={{ display: "flex", gap: "0.5rem" }}>
                       <input
                         type="text"
                         value={newPlayerName}
