@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 type Player = { id: string; name: string };
 type Event = { id: string; starts_at: string; ends_at: string | null; location: string | null; notes: string | null };
@@ -269,23 +270,35 @@ export default function PlayerApp({
     <main className="page">
       <div className="container">
         <header className="header">
-          <div className="brand">
-            <h1>🏓 Pickleball Spanish Lookout</h1>
-            <p>Game Schedule & Registrations</p>
+        <div className="brand" style={{ display: "flex", alignItems: "center", gap: "0.8rem" }}>
+          {/* Das Logo anstelle des Emojis */}
+          <Image
+            src="/logo.png"
+            alt="Pickleball Logo"
+            width={48}
+            height={48}
+            style={{ borderRadius: "50%", objectFit: "cover" }}
+            priority
+          />
+          <div>
+            <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Pickleball Spanish Lookout</h1>
+            <p style={{ margin: 0 }}>Game Schedule & Registrations</p>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-            <button
-              type="button"
-              onClick={toggleDarkMode}
-              className="btn btn-secondary"
-              style={{ padding: "0.4rem 0.75rem", fontSize: "1.1rem" }}
-              title="Toggle Dark/Light Mode"
-            >
-              {darkMode ? "☀️" : "🌙"}
-            </button>
-            <a className="admin-link" href="/admin">Admin Panel</a>
-          </div>
-        </header>
+        </div>
+        
+        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            className="btn btn-secondary"
+            style={{ padding: "0.4rem 0.75rem", fontSize: "1.1rem" }}
+            title="Toggle Dark/Light Mode"
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+          <a className="admin-link" href="/admin">Admin Panel</a>
+        </div>
+      </header>
 
         {message && <div className="notice">{message}</div>}
 
