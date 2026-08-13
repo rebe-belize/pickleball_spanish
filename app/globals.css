@@ -420,3 +420,7 @@ body.dark,
   border-color: #1d4ed8 !important;
   color: #93c5fd !important;
 }
+
+.dark input[type="time"] {
+  color-scheme: dark;
+}
